@@ -263,11 +263,12 @@ function App() {
   // Chart data with BOR approved rates
   const combinedChartData = historicalRoomRates.length > 0 
     ? historicalRoomRates.slice(-8).map((item) => {
+        const borRate = BOR_APPROVED_RATES[item.year];
         return {
           year: item.year || '',
           'Room Single': Math.round(item.single || 0),
           'Room Double': Math.round(item.double || 0),
-          'BOR Rate': BOR_APPROVED_RATES[item.year] || null,
+          'BOR Rate': borRate,
         };
       })
     : [];
