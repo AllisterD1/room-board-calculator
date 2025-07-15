@@ -260,13 +260,27 @@ function App() {
   const borDouble = calculateBORProjection(currentRatesFromSheet.double, baseline2010.double, whatIfYear);
   const borBoard = calculateBORProjection(adjustedBoardRate, boardBaseline2010, whatIfYear);
 
-  // Chart data
+  // Chart data with percentage increases
   const combinedChartData = historicalRoomRates.length > 0 
-    ? historicalRoomRates.slice(-8).map((item) => ({
-        year: item.year || '',
-        'Room Single': Math.round(item.single || 0),
-        'Room Double': Math.round(item.double || 0),
-      }))
+    ? historicalRoomRates.slice(-8).map((item, index, array) => {
+        // Calculate year-over-year percentage increase
+        let singleIncrease = 0;
+        let doubleIncrease = 0;
+        
+        if (index > 0) {
+          const prevItem = array[index - 1];
+          singleIncrease = ((item.single - prevItem.single) / prevItem.single) * 100;
+          doubleIncrease = ((item.double - prevItem.double) / prevItem.double) * 100;
+        }
+        
+        return {
+          year: item.year || '',
+          'Room Single': Math.round(item.single || 0),
+          'Room Double': Math.round(item.double || 0),
+          'Single % Increase': index > 0 ? Number(singleIncrease.toFixed(1)) : 0,
+          'Double % Increase': index > 0 ? Number(doubleIncrease.toFixed(1)) : 0,
+        };
+      })
     : [];
 
   if (loading && historicalRoomRates.length === 0) {
@@ -738,18 +752,67 @@ function App() {
       {/* Chart */}
       {combinedChartData.length > 0 && (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Room Rate Trends</h2>
+          <h2 className="text-xl font-semibold mb-4">Room Rate Trends & Year-over-Year Increases</h2>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={combinedChartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip formatter={(value) => [`$${value?.toLocaleString()}`, '']} />
+              <YAxis 
+                yAxisId="dollars" 
+                orientation="left" 
+                label={{ value: 'Rate ($)', angle: -90, position: 'insideLeft' }}
+              />
+              <YAxis 
+                yAxisId="percent" 
+                orientation="right" 
+                label={{ value: 'Increase (%)', angle: 90, position: 'insideRight' }}
+                domain={[0, 'dataMax + 2']}
+              />
+              <Tooltip 
+                formatter={(value, name) => {
+                  if (name.includes('%')) {
+                    return [`${value}%`, name];
+                  }
+                  return [`${value?.toLocaleString()}`, name];
+                }} 
+              />
               <Legend />
-              <Line type="monotone" dataKey="Room Single" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="Room Double" stroke="#3b82f6" strokeWidth={2} />
+              <Line 
+                yAxisId="dollars" 
+                type="monotone" 
+                dataKey="Room Single" 
+                stroke="#10b981" 
+                strokeWidth={2} 
+              />
+              <Line 
+                yAxisId="dollars" 
+                type="monotone" 
+                dataKey="Room Double" 
+                stroke="#3b82f6" 
+                strokeWidth={2} 
+              />
+              <Line 
+                yAxisId="percent" 
+                type="monotone" 
+                dataKey="Single % Increase" 
+                stroke="#f59e0b" 
+                strokeWidth={2} 
+                strokeDasharray="5 5"
+              />
+              <Line 
+                yAxisId="percent" 
+                type="monotone" 
+                dataKey="Double % Increase" 
+                stroke="#ef4444" 
+                strokeWidth={2} 
+                strokeDasharray="5 5"
+              />
             </LineChart>
           </ResponsiveContainer>
+          <div className="mt-4 text-sm text-gray-600">
+            <p><strong>Left Y-axis:</strong> Dollar amounts for room rates</p>
+            <p><strong>Right Y-axis:</strong> Year-over-year percentage increases (dashed lines)</p>
+          </div>
         </div>
       )}
 
