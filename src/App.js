@@ -223,7 +223,7 @@ function App() {
         </div>
       </div>
 
-      {/* Rate Adjustment Controls - Auto-Update from Google Sheets */ }
+      {/* Rate Adjustment Controls - Auto-Update from Google Sheets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Single Room Rate</h2>
