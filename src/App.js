@@ -141,12 +141,12 @@ function App() {
 
   // Safe formatting functions
   const formatCurrency = (value) => {
-    if (value === null || value === undefined || isNaN(value)) return '$0';
-    return `$${Number(value).toLocaleString()}`;
+    if (value === null || value === undefined || isNaN(value)) return '$0.00';
+    return `${Number(value).toFixed(2)}`;
   };
 
   const formatNumber = (value, decimals = 1) => {
-    if (value === null || value === undefined || isNaN(value)) return '0';
+    if (value === null || value === undefined || isNaN(value)) return '0.00';
     return Number(value).toFixed(decimals);
   };
 
@@ -514,12 +514,24 @@ function App() {
               {borSingle.yearByYearBreakdown && (
                 <div className="border-t border-blue-300 pt-3">
                   <div className="text-xs text-blue-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
-                  {borSingle.yearByYearBreakdown.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-blue-700">
-                      <span>{item.year}: {item.borRate}%</span>
-                      <span>{formatCurrency(item.rate)}</span>
-                    </div>
-                  ))}
+                  {borSingle.yearByYearBreakdown.map((item, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-blue-700">
+                          <span>{item.year}: Starting Rate</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    } else {
+                      const prevYear = borSingle.yearByYearBreakdown[idx - 1].year;
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-blue-700">
+                          <span>{prevYear}→{item.year}: {item.borRate}%</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -547,12 +559,24 @@ function App() {
               {borDouble.yearByYearBreakdown && (
                 <div className="border-t border-purple-300 pt-3">
                   <div className="text-xs text-purple-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
-                  {borDouble.yearByYearBreakdown.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-purple-700">
-                      <span>{item.year}: {item.borRate}%</span>
-                      <span>{formatCurrency(item.rate)}</span>
-                    </div>
-                  ))}
+                  {borDouble.yearByYearBreakdown.map((item, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-purple-700">
+                          <span>{item.year}: Starting Rate</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    } else {
+                      const prevYear = borDouble.yearByYearBreakdown[idx - 1].year;
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-purple-700">
+                          <span>{prevYear}→{item.year}: {item.borRate}%</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -580,12 +604,24 @@ function App() {
               {borBoard.yearByYearBreakdown && (
                 <div className="border-t border-green-300 pt-3">
                   <div className="text-xs text-green-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
-                  {borBoard.yearByYearBreakdown.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-green-700">
-                      <span>{item.year}: {item.borRate}%</span>
-                      <span>{formatCurrency(item.rate)}</span>
-                    </div>
-                  ))}
+                  {borBoard.yearByYearBreakdown.map((item, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-green-700">
+                          <span>{item.year}: Starting Rate</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    } else {
+                      const prevYear = borBoard.yearByYearBreakdown[idx - 1].year;
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-green-700">
+                          <span>{prevYear}→{item.year}: {item.borRate}%</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -668,12 +704,24 @@ function App() {
               {whatIfSingle.yearByYearBreakdown && (
                 <div className="border-t border-orange-300 pt-3">
                   <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
-                  {whatIfSingle.yearByYearBreakdown.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-orange-700">
-                      <span>{item.year}: {item.appliedRate}</span>
-                      <span>{formatCurrency(item.rate)}</span>
-                    </div>
-                  ))}
+                  {whatIfSingle.yearByYearBreakdown.map((item, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-orange-700">
+                          <span>{item.year}: Starting Rate</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    } else {
+                      const prevYear = whatIfSingle.yearByYearBreakdown[idx - 1].year;
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-orange-700">
+                          <span>{prevYear}→{item.year}: {item.appliedRate}</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -706,12 +754,24 @@ function App() {
               {whatIfDouble.yearByYearBreakdown && (
                 <div className="border-t border-orange-300 pt-3">
                   <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
-                  {whatIfDouble.yearByYearBreakdown.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-orange-700">
-                      <span>{item.year}: {item.appliedRate}</span>
-                      <span>{formatCurrency(item.rate)}</span>
-                    </div>
-                  ))}
+                  {whatIfDouble.yearByYearBreakdown.map((item, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-orange-700">
+                          <span>{item.year}: Starting Rate</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    } else {
+                      const prevYear = whatIfDouble.yearByYearBreakdown[idx - 1].year;
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-orange-700">
+                          <span>{prevYear}→{item.year}: {item.appliedRate}</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -744,12 +804,24 @@ function App() {
               {whatIfBoard.yearByYearBreakdown && (
                 <div className="border-t border-orange-300 pt-3">
                   <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
-                  {whatIfBoard.yearByYearBreakdown.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs text-orange-700">
-                      <span>{item.year}: {item.appliedRate}</span>
-                      <span>{formatCurrency(item.rate)}</span>
-                    </div>
-                  ))}
+                  {whatIfBoard.yearByYearBreakdown.map((item, idx) => {
+                    if (idx === 0) {
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-orange-700">
+                          <span>{item.year}: Starting Rate</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    } else {
+                      const prevYear = whatIfBoard.yearByYearBreakdown[idx - 1].year;
+                      return (
+                        <div key={idx} className="flex justify-between text-xs text-orange-700">
+                          <span>{prevYear}→{item.year}: {item.appliedRate}</span>
+                          <span>{formatCurrency(item.rate)}</span>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               )}
             </div>
@@ -781,7 +853,7 @@ function App() {
                   if (name === 'BOR Rate') {
                     return value ? [`${value}%`, name] : ['No BOR Rate', name];
                   }
-                  return [`$${value?.toLocaleString()}`, name];
+                  return [`${value?.toFixed(2)}`, name];
                 }} 
               />
               <Legend />
