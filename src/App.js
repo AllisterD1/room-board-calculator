@@ -489,15 +489,17 @@ function App() {
                   </span>
                 </div>
               </div>
-              <div className="border-t border-blue-300 pt-3">
-                <div className="text-xs text-blue-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
-                {borSingle.yearByYearBreakdown && borSingle.yearByYearBreakdown.slice(-3).map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-xs text-blue-700">
-                    <span>{item.year}: {item.borRate}%</span>
-                    <span>{formatCurrency(item.rate)}</span>
-                  </div>
-                ))}
-              </div>
+              {borSingle.yearByYearBreakdown && (
+                <div className="border-t border-blue-300 pt-3">
+                  <div className="text-xs text-blue-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
+                  {borSingle.yearByYearBreakdown.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-blue-700">
+                      <span>{item.year}: {item.borRate}%</span>
+                      <span>{formatCurrency(item.rate)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -520,15 +522,17 @@ function App() {
                   </span>
                 </div>
               </div>
-              <div className="border-t border-purple-300 pt-3">
-                <div className="text-xs text-purple-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
-                {borDouble.yearByYearBreakdown && borDouble.yearByYearBreakdown.slice(-3).map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-xs text-purple-700">
-                    <span>{item.year}: {item.borRate}%</span>
-                    <span>{formatCurrency(item.rate)}</span>
-                  </div>
-                ))}
-              </div>
+              {borDouble.yearByYearBreakdown && (
+                <div className="border-t border-purple-300 pt-3">
+                  <div className="text-xs text-purple-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
+                  {borDouble.yearByYearBreakdown.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-purple-700">
+                      <span>{item.year}: {item.borRate}%</span>
+                      <span>{formatCurrency(item.rate)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -551,15 +555,17 @@ function App() {
                   </span>
                 </div>
               </div>
-              <div className="border-t border-green-300 pt-3">
-                <div className="text-xs text-green-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
-                {borBoard.yearByYearBreakdown && borBoard.yearByYearBreakdown.slice(-3).map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-xs text-green-700">
-                    <span>{item.year}: {item.borRate}%</span>
-                    <span>{formatCurrency(item.rate)}</span>
-                  </div>
-                ))}
-              </div>
+              {borBoard.yearByYearBreakdown && (
+                <div className="border-t border-green-300 pt-3">
+                  <div className="text-xs text-green-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
+                  {borBoard.yearByYearBreakdown.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-green-700">
+                      <span>{item.year}: {item.borRate}%</span>
+                      <span>{formatCurrency(item.rate)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -640,7 +646,7 @@ function App() {
               {whatIfSingle.yearByYearBreakdown && (
                 <div className="border-t border-orange-300 pt-3">
                   <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
-                  {whatIfSingle.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                  {whatIfSingle.yearByYearBreakdown.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-xs text-orange-700">
                       <span>{item.year}: {item.appliedRate}</span>
                       <span>{formatCurrency(item.rate)}</span>
@@ -678,7 +684,7 @@ function App() {
               {whatIfDouble.yearByYearBreakdown && (
                 <div className="border-t border-orange-300 pt-3">
                   <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
-                  {whatIfDouble.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                  {whatIfDouble.yearByYearBreakdown.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-xs text-orange-700">
                       <span>{item.year}: {item.appliedRate}</span>
                       <span>{formatCurrency(item.rate)}</span>
