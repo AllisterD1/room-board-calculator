@@ -260,25 +260,14 @@ function App() {
   const borDouble = calculateBORProjection(currentRatesFromSheet.double, baseline2010.double, whatIfYear);
   const borBoard = calculateBORProjection(adjustedBoardRate, boardBaseline2010, whatIfYear);
 
-  // Chart data with percentage increases
+  // Chart data with BOR approved rates
   const combinedChartData = historicalRoomRates.length > 0 
-    ? historicalRoomRates.slice(-8).map((item, index, array) => {
-        // Calculate year-over-year percentage increase
-        let singleIncrease = 0;
-        let doubleIncrease = 0;
-        
-        if (index > 0) {
-          const prevItem = array[index - 1];
-          singleIncrease = ((item.single - prevItem.single) / prevItem.single) * 100;
-          doubleIncrease = ((item.double - prevItem.double) / prevItem.double) * 100;
-        }
-        
+    ? historicalRoomRates.slice(-8).map((item) => {
         return {
           year: item.year || '',
           'Room Single': Math.round(item.single || 0),
           'Room Double': Math.round(item.double || 0),
-          'Single % Increase': index > 0 ? Number(singleIncrease.toFixed(1)) : 0,
-          'Double % Increase': index > 0 ? Number(doubleIncrease.toFixed(1)) : 0,
+          'BOR Rate': BOR_APPROVED_RATES[item.year] || null,
         };
       })
     : [];
