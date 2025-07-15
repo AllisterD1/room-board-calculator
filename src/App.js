@@ -6,6 +6,16 @@ function App() {
   // Google Apps Script Configuration
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAuhixB_XwnU_MRtvG049ah5FjPS8CZSTqbuKsfPzDwiN4gEi19QR_zj0HAKYGC7I9/exec';
 
+  // BOR PRE-APPROVED RATES (from your spreadsheet Row 4)
+  const BOR_APPROVED_RATES = {
+    'FY25': 5.5,
+    'FY26': 5.0,
+    'FY27': 4.5,
+    'FY28': 6.0,
+    'FY29': 9.0
+    // FY30+ do not have board approved rates yet
+  };
+
   // State for data loaded from Google Sheets
   const [historicalRoomRates, setHistoricalRoomRates] = useState([]);
   const [currentRatesFromSheet, setCurrentRatesFromSheet] = useState({ single: 4192, double: 3341 });
@@ -45,11 +55,17 @@ function App() {
     double: 4228.50
   };
 
-  // REMOVED: Manual slider states - now sliders directly use Google Sheet values
-  // const [adjustedSingle, setAdjustedSingle] = useState(4192);
-  // const [adjustedDouble, setAdjustedDouble] = useState(3341);
+  // Helper to check if a year has BOR approved rate
+  const hasBORRate = (year) => BOR_APPROVED_RATES.hasOwnProperty(year);
+  const getBORRate = (year) => BOR_APPROVED_RATES[year];
   
-  // Keep only the board rate as manual adjustment (not synced with Google Sheets)
+  // For years with BOR rates, use that rate; for others, use custom rate
+  const getEffectiveRate = (year) => {
+    if (hasBORRate(year)) {
+      return getBORRate(year);
+    }
+    return whatIfRate;
+  };
   const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
   const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
   const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
@@ -132,35 +148,117 @@ function App() {
     return Number(value).toFixed(decimals);
   };
 
-  // What-If Calculator function (now uses Google Sheet values)
+  // FIXED: What-If Calculator that respects BOR rates for FY25-30, then applies custom rate
   const calculateWhatIfRecovery = (currentRate, baselineRate, annualRate, targetYear) => {
-    const currentYearIndex = availableYears.indexOf('FY25');
-    const targetYearIndex = availableYears.indexOf(targetYear);
+    const yearOrder = ['FY25', 'FY26', 'FY27', 'FY28', 'FY29', 'FY30'];
+    const currentYearIndex = yearOrder.indexOf('FY25');
+    const targetYearIndex = yearOrder.indexOf(targetYear);
     
     if (targetYearIndex === -1 || targetYearIndex <= currentYearIndex) {
       return {
         projectedRate: currentRate,
         inflationAdjustedBaseline: baselineRate * 1.415,
-        fullRecovery: currentRate >= (baselineRate * 1.415)
+        fullRecovery: currentRate >= (baselineRate * 1.415),
+        yearByYearBreakdown: [{ year: 'FY25', rate: currentRate, appliedRate: 'Current' }]
       };
     }
     
-    const yearsToTarget = targetYearIndex - currentYearIndex;
-    const projectedRate = currentRate * Math.pow(1 + (annualRate / 100), yearsToTarget);
+    // Apply BOR rates through FY30, then custom rate for years beyond
+    let projectedRate = currentRate;
+    const yearByYearBreakdown = [];
+    
+    for (let i = currentYearIndex; i <= targetYearIndex; i++) {
+      const year = yearOrder[i];
+      
+      if (i === currentYearIndex) {
+        // Starting year
+        yearByYearBreakdown.push({ 
+          year, 
+          rate: projectedRate, 
+          appliedRate: 'Starting Rate' 
+        });
+      } else if (BOR_APPROVED_RATES[year]) {
+        // Use BOR rate if available
+        const borRate = BOR_APPROVED_RATES[year];
+        projectedRate = projectedRate * (1 + (borRate / 100));
+        yearByYearBreakdown.push({ 
+          year, 
+          rate: projectedRate, 
+          appliedRate: `${borRate}% (BOR)` 
+        });
+      } else {
+        // Use custom rate for years beyond BOR approval
+        projectedRate = projectedRate * (1 + (annualRate / 100));
+        yearByYearBreakdown.push({ 
+          year, 
+          rate: projectedRate, 
+          appliedRate: `${annualRate}% (Custom)` 
+        });
+      }
+    }
+    
     const inflationAdjustedBaseline = baselineRate * 1.415;
     
     return {
       projectedRate,
       inflationAdjustedBaseline,
       fullRecovery: projectedRate >= inflationAdjustedBaseline,
-      stillToRecover: Math.max(0, inflationAdjustedBaseline - projectedRate)
+      stillToRecover: Math.max(0, inflationAdjustedBaseline - projectedRate),
+      yearByYearBreakdown
     };
   };
 
-  // What-if calculations now use Google Sheet values
+  // NEW: BOR Rate Calculator function
+  const calculateBORProjection = (currentRate, baselineRate, targetYear) => {
+    const yearOrder = ['FY25', 'FY26', 'FY27', 'FY28', 'FY29', 'FY30'];
+    const currentYearIndex = yearOrder.indexOf('FY25');
+    const targetYearIndex = yearOrder.indexOf(targetYear);
+    
+    if (targetYearIndex === -1 || targetYearIndex <= currentYearIndex) {
+      return {
+        projectedRate: currentRate,
+        inflationAdjustedBaseline: baselineRate * 1.415,
+        fullRecovery: currentRate >= (baselineRate * 1.415),
+        yearByYearBreakdown: [{ year: 'FY25', rate: currentRate, borRate: BOR_APPROVED_RATES['FY25'] }]
+      };
+    }
+    
+    // Calculate year-by-year using BOR rates
+    let projectedRate = currentRate;
+    const yearByYearBreakdown = [];
+    
+    for (let i = currentYearIndex; i <= targetYearIndex; i++) {
+      const year = yearOrder[i];
+      const borRate = BOR_APPROVED_RATES[year];
+      
+      if (i === currentYearIndex) {
+        yearByYearBreakdown.push({ year, rate: projectedRate, borRate });
+      } else {
+        projectedRate = projectedRate * (1 + (borRate / 100));
+        yearByYearBreakdown.push({ year, rate: projectedRate, borRate });
+      }
+    }
+    
+    const inflationAdjustedBaseline = baselineRate * 1.415;
+    
+    return {
+      projectedRate,
+      inflationAdjustedBaseline,
+      fullRecovery: projectedRate >= inflationAdjustedBaseline,
+      stillToRecover: Math.max(0, inflationAdjustedBaseline - projectedRate),
+      yearByYearBreakdown
+    };
+  };
+
+  // Original what-if calculations (custom rate)
   const whatIfSingle = calculateWhatIfRecovery(currentRatesFromSheet.single, baseline2010.single, whatIfRate, whatIfYear);
   const whatIfDouble = calculateWhatIfRecovery(currentRatesFromSheet.double, baseline2010.double, whatIfRate, whatIfYear);
   const whatIfBoard = calculateWhatIfRecovery(adjustedBoardRate, boardBaseline2010, whatIfRate, whatIfYear);
+
+  // NEW: BOR projections
+  const borSingle = calculateBORProjection(currentRatesFromSheet.single, baseline2010.single, whatIfYear);
+  const borDouble = calculateBORProjection(currentRatesFromSheet.double, baseline2010.double, whatIfYear);
+  const borBoard = calculateBORProjection(adjustedBoardRate, boardBaseline2010, whatIfYear);
 
   // Chart data
   const combinedChartData = historicalRoomRates.length > 0 
@@ -226,7 +324,24 @@ function App() {
         </div>
       </div>
 
-      {/* Rate Adjustment Controls - NOW FULLY SYNCED with Google Sheets */}
+      {/* BOR Rates Display */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-lg p-6 mb-6 border-2 border-blue-200">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800">BOR Pre-Approved Rates (FY25-29 Fixed)</h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {Object.entries(BOR_APPROVED_RATES).map(([year, rate]) => (
+            <div key={year} className="text-center p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="text-sm font-medium text-gray-600">{year}</div>
+              <div className="text-lg font-bold text-blue-600">{rate}%</div>
+            </div>
+          ))}
+          <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200 shadow-sm">
+            <div className="text-sm font-medium text-gray-600">FY30+</div>
+            <div className="text-lg font-bold text-orange-600">Custom</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rate Adjustment Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Single Room Rate</h2>
@@ -334,26 +449,156 @@ function App() {
         </div>
       </div>
 
-      {/* What-If Calculator */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800">What-If Calculator</h2>
+      {/* BOR Rate Projections */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-l-4 border-blue-500">
+        <h2 className="text-2xl font-semibold mb-6 text-gray-800">BOR Rate Projections (Official)</h2>
+        <p className="text-sm text-gray-600 mb-4">Using pre-approved rates: FY25(5.5%), FY26(5.0%), FY27(4.5%), FY28(6.0%), FY29(9.0%). FY30+ rates pending approval.</p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
           <div className="bg-gray-50 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Annual Rate (%)</label>
-            <input
-              type="number"
-              min="0"
-              max="50"
-              step="0.5"
-              value={whatIfRate}
-              onChange={(e) => setWhatIfRate(parseFloat(e.target.value) || 0)}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-              placeholder="5.0"
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Target Year for BOR Projections</label>
+            <select
+              value={whatIfYear}
+              onChange={(e) => setWhatIfYear(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg appearance-none bg-white"
+            >
+              {availableYears.slice(availableYears.indexOf('FY25')).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-blue-50 rounded-lg border-2 border-blue-200 p-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4">Single Room BOR Projection</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-blue-700">Projected by {whatIfYear}:</span>
+                <span className="font-bold text-blue-800">{formatCurrency(borSingle.projectedRate)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-blue-700">Inflation-Adjusted Target:</span>
+                <span className="font-bold text-blue-800">{formatCurrency(borSingle.inflationAdjustedBaseline)}</span>
+              </div>
+              <div className="border-t border-blue-300 pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-blue-700">Status:</span>
+                  <span className={`font-bold ${borSingle.fullRecovery ? 'text-green-600' : 'text-red-600'}`}>
+                    {borSingle.fullRecovery ? '✓ Fully Recovered' : formatCurrency(borSingle.stillToRecover)}
+                  </span>
+                </div>
+              </div>
+              <div className="border-t border-blue-300 pt-3">
+                <div className="text-xs text-blue-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
+                {borSingle.yearByYearBreakdown && borSingle.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-blue-700">
+                    <span>{item.year}: {item.borRate}%</span>
+                    <span>{formatCurrency(item.rate)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-purple-50 rounded-lg border-2 border-purple-200 p-6">
+            <h3 className="text-lg font-semibold text-purple-800 mb-4">Double Room BOR Projection</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-purple-700">Projected by {whatIfYear}:</span>
+                <span className="font-bold text-purple-800">{formatCurrency(borDouble.projectedRate)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-purple-700">Inflation-Adjusted Target:</span>
+                <span className="font-bold text-purple-800">{formatCurrency(borDouble.inflationAdjustedBaseline)}</span>
+              </div>
+              <div className="border-t border-purple-300 pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-purple-700">Status:</span>
+                  <span className={`font-bold ${borDouble.fullRecovery ? 'text-green-600' : 'text-red-600'}`}>
+                    {borDouble.fullRecovery ? '✓ Fully Recovered' : formatCurrency(borDouble.stillToRecover)}
+                  </span>
+                </div>
+              </div>
+              <div className="border-t border-purple-300 pt-3">
+                <div className="text-xs text-purple-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
+                {borDouble.yearByYearBreakdown && borDouble.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-purple-700">
+                    <span>{item.year}: {item.borRate}%</span>
+                    <span>{formatCurrency(item.rate)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-50 rounded-lg border-2 border-green-200 p-6">
+            <h3 className="text-lg font-semibold text-green-800 mb-4">Board Rate BOR Projection</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">Projected by {whatIfYear}:</span>
+                <span className="font-bold text-green-800">{formatCurrency(borBoard.projectedRate)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-green-700">Inflation-Adjusted Target:</span>
+                <span className="font-bold text-green-800">{formatCurrency(borBoard.inflationAdjustedBaseline)}</span>
+              </div>
+              <div className="border-t border-green-300 pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-green-700">Status:</span>
+                  <span className={`font-bold ${borBoard.fullRecovery ? 'text-green-600' : 'text-red-600'}`}>
+                    {borBoard.fullRecovery ? '✓ Fully Recovered' : formatCurrency(borBoard.stillToRecover)}
+                  </span>
+                </div>
+              </div>
+              <div className="border-t border-green-300 pt-3">
+                <div className="text-xs text-green-600 font-semibold mb-2">Year-by-Year BOR Breakdown:</div>
+                {borBoard.yearByYearBreakdown && borBoard.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-green-700">
+                    <span>{item.year}: {item.borRate}%</span>
+                    <span>{formatCurrency(item.rate)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Original What-If Calculator */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-l-4 border-orange-500">
+        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Custom What-If Calculator</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          <strong>How it works:</strong> 
+          <br />• <strong>FY25-29:</strong> Uses fixed BOR approved rates (rate input locked)
+          <br />• <strong>FY30+:</strong> Uses your custom rate input for years beyond board approval
+          <br />• Always respects the approved rates for years that have them
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-orange-50 rounded-lg p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {hasBORRate(whatIfYear) ? `Rate for ${whatIfYear} (BOR Fixed)` : 'Custom Annual Rate (%)'}
+            </label>
+            {hasBORRate(whatIfYear) ? (
+              <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold text-center">
+                {getBORRate(whatIfYear)}% (Board Approved - Cannot Change)
+              </div>
+            ) : (
+              <input
+                type="number"
+                min="0"
+                max="50"
+                step="0.5"
+                value={whatIfRate}
+                onChange={(e) => setWhatIfRate(parseFloat(e.target.value) || 0)}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                placeholder="5.0"
+              />
+            )}
+          </div>
+
+          <div className="bg-orange-50 rounded-lg p-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Target Year</label>
             <select
               value={whatIfYear}
@@ -367,71 +612,118 @@ function App() {
           </div>
         </div>
 
-        {/* What-If Results */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-lg border-2 border-blue-200 p-6">
-            <h3 className="text-lg font-semibold text-blue-800 mb-4">Single Room What-If</h3>
+          <div className="bg-orange-50 rounded-lg border-2 border-orange-200 p-6">
+            <h3 className="text-lg font-semibold text-orange-800 mb-4">Single Room Custom What-If</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-blue-700">Projected by {whatIfYear}:</span>
-                <span className="font-bold text-blue-800">{formatCurrency(whatIfSingle.projectedRate)}</span>
+                <span className="text-sm text-orange-700">Projected by {whatIfYear}:</span>
+                <span className="font-bold text-orange-800">{formatCurrency(whatIfSingle.projectedRate)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-blue-700">Inflation-Adjusted Target:</span>
-                <span className="font-bold text-blue-800">{formatCurrency(whatIfSingle.inflationAdjustedBaseline)}</span>
+                <span className="text-sm text-orange-700">
+                  {hasBORRate(whatIfYear) 
+                    ? `Uses BOR rate: ${getBORRate(whatIfYear)}%` 
+                    : `Uses BOR rates FY25-29, then ${whatIfRate}%`
+                  }
+                </span>
+                <span className="font-bold text-orange-800">{formatCurrency(whatIfSingle.inflationAdjustedBaseline)}</span>
               </div>
-              <div className="border-t border-blue-300 pt-3">
+              <div className="border-t border-orange-300 pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">Still to Recover:</span>
+                  <span className="text-sm text-orange-700">Still to Recover:</span>
                   <span className={`font-bold ${whatIfSingle.fullRecovery ? 'text-green-600' : 'text-red-600'}`}>
                     {whatIfSingle.fullRecovery ? '✓ Fully Recovered' : formatCurrency(whatIfSingle.stillToRecover)}
                   </span>
                 </div>
               </div>
+              {whatIfSingle.yearByYearBreakdown && (
+                <div className="border-t border-orange-300 pt-3">
+                  <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
+                  {whatIfSingle.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-orange-700">
+                      <span>{item.year}: {item.appliedRate}</span>
+                      <span>{formatCurrency(item.rate)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="bg-purple-50 rounded-lg border-2 border-purple-200 p-6">
-            <h3 className="text-lg font-semibold text-purple-800 mb-4">Double Room What-If</h3>
+          <div className="bg-orange-50 rounded-lg border-2 border-orange-200 p-6">
+            <h3 className="text-lg font-semibold text-orange-800 mb-4">Double Room Custom What-If</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-purple-700">Projected by {whatIfYear}:</span>
-                <span className="font-bold text-purple-800">{formatCurrency(whatIfDouble.projectedRate)}</span>
+                <span className="text-sm text-orange-700">Projected by {whatIfYear}:</span>
+                <span className="font-bold text-orange-800">{formatCurrency(whatIfDouble.projectedRate)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-purple-700">Inflation-Adjusted Target:</span>
-                <span className="font-bold text-purple-800">{formatCurrency(whatIfDouble.inflationAdjustedBaseline)}</span>
+                <span className="text-sm text-orange-700">
+                  {hasBORRate(whatIfYear) 
+                    ? `Uses BOR rate: ${getBORRate(whatIfYear)}%` 
+                    : `Uses BOR rates FY25-29, then ${whatIfRate}%`
+                  }
+                </span>
+                <span className="font-bold text-orange-800">{formatCurrency(whatIfDouble.inflationAdjustedBaseline)}</span>
               </div>
-              <div className="border-t border-purple-300 pt-3">
+              <div className="border-t border-orange-300 pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-purple-700">Still to Recover:</span>
+                  <span className="text-sm text-orange-700">Still to Recover:</span>
                   <span className={`font-bold ${whatIfDouble.fullRecovery ? 'text-green-600' : 'text-red-600'}`}>
                     {whatIfDouble.fullRecovery ? '✓ Fully Recovered' : formatCurrency(whatIfDouble.stillToRecover)}
                   </span>
                 </div>
               </div>
+              {whatIfDouble.yearByYearBreakdown && (
+                <div className="border-t border-orange-300 pt-3">
+                  <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
+                  {whatIfDouble.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-orange-700">
+                      <span>{item.year}: {item.appliedRate}</span>
+                      <span>{formatCurrency(item.rate)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="bg-green-50 rounded-lg border-2 border-green-200 p-6">
-            <h3 className="text-lg font-semibold text-green-800 mb-4">Board Rate What-If</h3>
+          <div className="bg-orange-50 rounded-lg border-2 border-orange-200 p-6">
+            <h3 className="text-lg font-semibold text-orange-800 mb-4">Board Rate Custom What-If</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-green-700">Projected by {whatIfYear}:</span>
-                <span className="font-bold text-green-800">{formatCurrency(whatIfBoard.projectedRate)}</span>
+                <span className="text-sm text-orange-700">Projected by {whatIfYear}:</span>
+                <span className="font-bold text-orange-800">{formatCurrency(whatIfBoard.projectedRate)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-green-700">Inflation-Adjusted Target:</span>
-                <span className="font-bold text-green-800">{formatCurrency(whatIfBoard.inflationAdjustedBaseline)}</span>
+                <span className="text-sm text-orange-700">
+                  {hasBORRate(whatIfYear) 
+                    ? `Uses BOR rate: ${getBORRate(whatIfYear)}%` 
+                    : `Uses BOR rates FY25-29, then ${whatIfRate}%`
+                  }
+                </span>
+                <span className="font-bold text-orange-800">{formatCurrency(whatIfBoard.inflationAdjustedBaseline)}</span>
               </div>
-              <div className="border-t border-green-300 pt-3">
+              <div className="border-t border-orange-300 pt-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700">Still to Recover:</span>
+                  <span className="text-sm text-orange-700">Still to Recover:</span>
                   <span className={`font-bold ${whatIfBoard.fullRecovery ? 'text-green-600' : 'text-red-600'}`}>
                     {whatIfBoard.fullRecovery ? '✓ Fully Recovered' : formatCurrency(whatIfBoard.stillToRecover)}
                   </span>
                 </div>
               </div>
+              {whatIfBoard.yearByYearBreakdown && (
+                <div className="border-t border-orange-300 pt-3">
+                  <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
+                  {whatIfBoard.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-xs text-orange-700">
+                      <span>{item.year}: {item.appliedRate}</span>
+                      <span>{formatCurrency(item.rate)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -455,7 +747,7 @@ function App() {
         </div>
       )}
 
-      {/* Current Totals - LIVE DATA FROM I45/I46 */}
+      {/* Current Totals */}
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-semibold mb-6 text-gray-800">Current Totals (Live from Google Sheet)</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
