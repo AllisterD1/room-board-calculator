@@ -37,14 +37,19 @@ function App() {
 
   // Baseline data
   const baseline2010 = { single: 3748.55, double: 2987.57 };
-  // Get current rates from latest Google Sheets data
-const currentActual = historicalRoomRates.length > 0 
-  ? { 
-      single: historicalRoomRates.find(r => r.year === 'FY25')?.single || 4192,
-      double: historicalRoomRates.find(r => r.year === 'FY25')?.double || 3341
-    }
-  : { single: 4192, double: 3341 };
-  const targetRates = { single: 5305.56, double: 4228.50 };
+
+  // Get current rates from latest Google Sheets data (FY25)
+  const currentActual = historicalRoomRates.length > 0 
+    ? { 
+        single: historicalRoomRates.find(r => r.year === 'FY25')?.single || 5305.56,
+        double: historicalRoomRates.find(r => r.year === 'FY25')?.double || 4228.50
+      }
+    : { single: 5305.56, double: 4228.50 };
+
+  const targetRates = {
+    single: 5305.56,
+    double: 4228.50
+  };
 
   // Function to fetch data from Google Apps Script
   const fetchGoogleSheetData = async () => {
@@ -72,16 +77,9 @@ const currentActual = historicalRoomRates.length > 0
   };
 
   // Load data on component mount
-  // Update slider values when data loads
-useEffect(() => {
-  if (historicalRoomRates.length > 0) {
-    const fy25Data = historicalRoomRates.find(r => r.year === 'FY25');
-    if (fy25Data) {
-      setAdjustedSingle(fy25Data.single);
-      setAdjustedDouble(fy25Data.double);
-    }
-  }
-}, [historicalRoomRates]);
+  useEffect(() => {
+    fetchGoogleSheetData();
+  }, []);
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
@@ -89,14 +87,25 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, []);
 
-  // State management
-  const [adjustedSingle, setAdjustedSingle] = useState(4192);
-  const [adjustedDouble, setAdjustedDouble] = useState(3341);
+  // State management - Initialize with default values
+  const [adjustedSingle, setAdjustedSingle] = useState(5305.56);
+  const [adjustedDouble, setAdjustedDouble] = useState(4228.50);
   const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
   const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
   const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
   const [whatIfRate, setWhatIfRate] = useState(5);
   const [whatIfYear, setWhatIfYear] = useState('FY30');
+
+  // Update slider values when Google Sheets data loads
+  useEffect(() => {
+    if (historicalRoomRates.length > 0) {
+      const fy25Data = historicalRoomRates.find(r => r.year === 'FY25');
+      if (fy25Data) {
+        setAdjustedSingle(fy25Data.single);
+        setAdjustedDouble(fy25Data.double);
+      }
+    }
+  }, [historicalRoomRates]);
 
   // Available years for dropdown
   const availableYears = historicalRoomRates.length > 0 ? historicalRoomRates.map(rate => rate.year) : ['FY25'];
@@ -241,7 +250,7 @@ useEffect(() => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Gap:</span>
-                <span className="font-bold text-red-600">
+                <span className={`font-bold ${adjustedSingle >= targetRates.single ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(Math.abs(singleGap))} ({formatNumber(Math.abs(singleGap / adjustedSingle * 100))}%)
                 </span>
               </div>
@@ -276,7 +285,7 @@ useEffect(() => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Gap:</span>
-                <span className="font-bold text-red-600">
+                <span className={`font-bold ${adjustedDouble >= targetRates.double ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(Math.abs(doubleGap))} ({formatNumber(Math.abs(doubleGap / adjustedDouble * 100))}%)
                 </span>
               </div>
@@ -311,7 +320,7 @@ useEffect(() => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Gap:</span>
-                <span className="font-bold text-red-600">
+                <span className={`font-bold ${adjustedBoardRate >= currentBoardTarget ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(Math.abs(boardGap))} ({formatNumber(Math.abs(boardGap / adjustedBoardRate * 100))}%)
                 </span>
               </div>
