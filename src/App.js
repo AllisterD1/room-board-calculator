@@ -45,6 +45,17 @@ function App() {
     double: 4228.50
   };
 
+  // REMOVED: Manual slider states - now sliders directly use Google Sheet values
+  // const [adjustedSingle, setAdjustedSingle] = useState(4192);
+  // const [adjustedDouble, setAdjustedDouble] = useState(3341);
+  
+  // Keep only the board rate as manual adjustment (not synced with Google Sheets)
+  const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
+  const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
+  const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
+  const [whatIfRate, setWhatIfRate] = useState(5);
+  const [whatIfYear, setWhatIfYear] = useState('FY30');
+
   // Function to fetch data from Google Apps Script
   const fetchGoogleSheetData = async () => {
     try {
@@ -100,21 +111,12 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // State management - Manual slider controls (NOT auto-updated)
-  const [adjustedSingle, setAdjustedSingle] = useState(4192);
-  const [adjustedDouble, setAdjustedDouble] = useState(3341);
-  const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
-  const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
-  const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
-  const [whatIfRate, setWhatIfRate] = useState(5);
-  const [whatIfYear, setWhatIfYear] = useState('FY30');
-
   // Available years for dropdown
   const availableYears = historicalRoomRates.length > 0 ? historicalRoomRates.map(rate => rate.year) : ['FY25'];
 
-  // Calculate metrics
-  const singleGap = (targetRates.single || 0) - (adjustedSingle || 0);
-  const doubleGap = (targetRates.double || 0) - (adjustedDouble || 0);
+  // Calculate metrics using Google Sheet values directly
+  const singleGap = (targetRates.single || 0) - (currentRatesFromSheet.single || 0);
+  const doubleGap = (targetRates.double || 0) - (currentRatesFromSheet.double || 0);
   const boardBaseline2010 = 2500;
   const currentBoardTarget = 4200;
   const boardGap = currentBoardTarget - adjustedBoardRate;
@@ -130,7 +132,7 @@ function App() {
     return Number(value).toFixed(decimals);
   };
 
-  // What-If Calculator function
+  // What-If Calculator function (now uses Google Sheet values)
   const calculateWhatIfRecovery = (currentRate, baselineRate, annualRate, targetYear) => {
     const currentYearIndex = availableYears.indexOf('FY25');
     const targetYearIndex = availableYears.indexOf(targetYear);
@@ -155,8 +157,9 @@ function App() {
     };
   };
 
-  const whatIfSingle = calculateWhatIfRecovery(adjustedSingle, baseline2010.single, whatIfRate, whatIfYear);
-  const whatIfDouble = calculateWhatIfRecovery(adjustedDouble, baseline2010.double, whatIfRate, whatIfYear);
+  // What-if calculations now use Google Sheet values
+  const whatIfSingle = calculateWhatIfRecovery(currentRatesFromSheet.single, baseline2010.single, whatIfRate, whatIfYear);
+  const whatIfDouble = calculateWhatIfRecovery(currentRatesFromSheet.double, baseline2010.double, whatIfRate, whatIfYear);
   const whatIfBoard = calculateWhatIfRecovery(adjustedBoardRate, boardBaseline2010, whatIfRate, whatIfYear);
 
   // Chart data
@@ -206,7 +209,7 @@ function App() {
           </button>
         </div>
         <div className="flex justify-between items-center">
-          <p className="text-gray-600">Sliders auto-update from I45/I46, adjust for scenarios</p>
+          <p className="text-gray-600">Sliders auto-sync with Google Sheet I45/I46 values</p>
           <div className="text-sm text-gray-500">
             {lastUpdated ? (
               <div className="flex items-center space-x-2">
@@ -223,23 +226,22 @@ function App() {
         </div>
       </div>
 
-      {/* Rate Adjustment Controls - Auto-Update from Google Sheets */}
+      {/* Rate Adjustment Controls - NOW FULLY SYNCED with Google Sheets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Single Room Rate</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedSingle)} <span className="text-xs text-gray-500">(auto-updates from I45)</span>
+                Current Rate: {formatCurrency(currentRatesFromSheet.single)} <span className="text-xs text-blue-600 font-semibold">(synced with I45)</span>
               </label>
               <input
                 type="range"
                 min="3500"
                 max="10000"
-                value={adjustedSingle}
-                onChange={(e) => setAdjustedSingle(parseInt(e.target.value))}
+                value={currentRatesFromSheet.single}
+                onChange={(e) => setCurrentRatesFromSheet(prev => ({ ...prev, single: parseInt(e.target.value) }))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                key={`single-${adjustedSingle}`}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$3,500</span>
@@ -253,8 +255,8 @@ function App() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Gap:</span>
-                <span className={`font-bold ${adjustedSingle >= targetRates.single ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(Math.abs(singleGap))} ({formatNumber(Math.abs(singleGap / adjustedSingle * 100))}%)
+                <span className={`font-bold ${currentRatesFromSheet.single >= targetRates.single ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(Math.abs(singleGap))} ({formatNumber(Math.abs(singleGap / currentRatesFromSheet.single * 100))}%)
                 </span>
               </div>
             </div>
@@ -266,16 +268,15 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedDouble)} <span className="text-xs text-gray-500">(auto-updates from I46)</span>
+                Current Rate: {formatCurrency(currentRatesFromSheet.double)} <span className="text-xs text-purple-600 font-semibold">(synced with I46)</span>
               </label>
               <input
                 type="range"
                 min="2800"
                 max="8000"
-                value={adjustedDouble}
-                onChange={(e) => setAdjustedDouble(parseInt(e.target.value))}
+                value={currentRatesFromSheet.double}
+                onChange={(e) => setCurrentRatesFromSheet(prev => ({ ...prev, double: parseInt(e.target.value) }))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                key={`double-${adjustedDouble}`}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$2,800</span>
@@ -289,8 +290,8 @@ function App() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Gap:</span>
-                <span className={`font-bold ${adjustedDouble >= targetRates.double ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(Math.abs(doubleGap))} ({formatNumber(Math.abs(doubleGap / adjustedDouble * 100))}%)
+                <span className={`font-bold ${currentRatesFromSheet.double >= targetRates.double ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(Math.abs(doubleGap))} ({formatNumber(Math.abs(doubleGap / currentRatesFromSheet.double * 100))}%)
                 </span>
               </div>
             </div>
