@@ -183,23 +183,28 @@ function App() {
           rate: projectedRate, 
           appliedRate: 'Starting Rate' 
         });
-      } else if (BOR_APPROVED_RATES[year]) {
-        // Use BOR rate if available
-        const borRate = BOR_APPROVED_RATES[year];
-        projectedRate = projectedRate * (1 + (borRate / 100));
-        yearByYearBreakdown.push({ 
-          year, 
-          rate: projectedRate, 
-          appliedRate: `${borRate}% (BOR)` 
-        });
       } else {
-        // Use custom rate for years beyond BOR approval
-        projectedRate = projectedRate * (1 + (annualRate / 100));
-        yearByYearBreakdown.push({ 
-          year, 
-          rate: projectedRate, 
-          appliedRate: `${annualRate}% (Custom)` 
-        });
+        // FIXED: Use the PREVIOUS year's rate for the transition
+        const previousYear = yearOrder[i - 1];
+        const borRate = BOR_APPROVED_RATES[previousYear];
+        
+        if (borRate) {
+          // Use BOR rate from previous year
+          projectedRate = projectedRate * (1 + (borRate / 100));
+          yearByYearBreakdown.push({ 
+            year, 
+            rate: projectedRate, 
+            appliedRate: `${borRate}% (BOR)` 
+          });
+        } else {
+          // Use custom rate for years beyond BOR approval
+          projectedRate = projectedRate * (1 + (annualRate / 100));
+          yearByYearBreakdown.push({ 
+            year, 
+            rate: projectedRate, 
+            appliedRate: `${annualRate}% (Custom)` 
+          });
+        }
       }
     }
     
@@ -212,7 +217,7 @@ function App() {
     };
   };
 
-  // NEW: BOR Rate Calculator function
+  // FIXED: BOR Rate Calculator function
   const calculateBORProjection = (currentRate, baselineRate, targetYear) => {
     const yearOrder = ['FY25', 'FY26', 'FY27', 'FY28', 'FY29', 'FY30'];
     const currentYearIndex = yearOrder.indexOf('FY25');
@@ -236,16 +241,22 @@ function App() {
     
     for (let i = currentYearIndex; i <= targetYearIndex; i++) {
       const year = yearOrder[i];
-      const borRate = BOR_APPROVED_RATES[year];
       
       if (i === currentYearIndex) {
+        const borRate = BOR_APPROVED_RATES[year];
         yearByYearBreakdown.push({ year, rate: projectedRate, borRate: borRate || 'N/A' });
-      } else if (borRate) {
-        projectedRate = projectedRate * (1 + (borRate / 100));
-        yearByYearBreakdown.push({ year, rate: projectedRate, borRate });
       } else {
-        // No BOR rate available for this year
-        yearByYearBreakdown.push({ year, rate: projectedRate, borRate: 'N/A' });
+        // FIXED: Use the PREVIOUS year's rate for the transition
+        const previousYear = yearOrder[i - 1];
+        const borRate = BOR_APPROVED_RATES[previousYear];
+        
+        if (borRate) {
+          projectedRate = projectedRate * (1 + (borRate / 100));
+          yearByYearBreakdown.push({ year, rate: projectedRate, borRate });
+        } else {
+          // No BOR rate available for this year
+          yearByYearBreakdown.push({ year, rate: projectedRate, borRate: 'N/A' });
+        }
       }
     }
     
