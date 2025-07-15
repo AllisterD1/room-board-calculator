@@ -142,8 +142,8 @@ function App() {
   // Safe formatting functions
   const formatCurrency = (value) => {
     if (value === null || value === undefined || isNaN(value)) return '$0.00';
-    return `${Number(value).toFixed(2)}`;
-  };
+    return `${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
   const formatNumber = (value, decimals = 1) => {
     if (value === null || value === undefined || isNaN(value)) return '0.00';
