@@ -239,7 +239,7 @@ function App() {
                 value={adjustedSingle}
                 onChange={(e) => setAdjustedSingle(parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                key={`single-${adjustedSingle}`}
+                key={`single-${adjustedSingle}-${forceUpdate}`}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$3,500</span>
@@ -275,7 +275,7 @@ function App() {
                 value={adjustedDouble}
                 onChange={(e) => setAdjustedDouble(parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                key={`double-${adjustedDouble}`}
+                key={`double-${adjustedDouble}-${forceUpdate}`}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$2,800</span>
