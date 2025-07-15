@@ -1,3 +1,0 @@
-/*
-  X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: frame-ancestors 'self' https://*.google.com https://*.googleusercontent.com https://sites.google.com
