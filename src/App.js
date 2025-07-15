@@ -232,14 +232,15 @@ function App() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Current Rate: {formatCurrency(adjustedSingle)} <span className="text-xs text-gray-500">(auto-updates from I45)</span>
               </label>
-              <input
-                type="range"
-                min="3500"
-                max="10000"
-                value={adjustedSingle}
-                onChange={(e) => setAdjustedSingle(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-              />
+             <input
+              type="range"
+                  min="3500"
+                  max="10000"
+                  value={adjustedSingle}
+                  onChange={(e) => setAdjustedSingle(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  key={`single-${adjustedSingle}`}
+                />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$3,500</span>
                 <span>$10,000</span>
@@ -267,13 +268,14 @@ function App() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Current Rate: {formatCurrency(adjustedDouble)} <span className="text-xs text-gray-500">(auto-updates from I46)</span>
               </label>
-              <input
+             <input
                 type="range"
                 min="2800"
                 max="8000"
                 value={adjustedDouble}
                 onChange={(e) => setAdjustedDouble(parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                key={`double-${adjustedDouble}`}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$2,800</span>
