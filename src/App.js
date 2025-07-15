@@ -16,6 +16,18 @@ function App() {
     // FY30+ do not have board approved rates yet
   };
 
+  // Helper to check if a year has BOR approved rate
+  const hasBORRate = (year) => BOR_APPROVED_RATES.hasOwnProperty(year);
+  const getBORRate = (year) => BOR_APPROVED_RATES[year];
+  
+  // For years with BOR rates, use that rate; for others, use custom rate
+  const getEffectiveRate = (year) => {
+    if (hasBORRate(year)) {
+      return getBORRate(year);
+    }
+    return whatIfRate;
+  };
+
   // State for data loaded from Google Sheets
   const [historicalRoomRates, setHistoricalRoomRates] = useState([]);
   const [currentRatesFromSheet, setCurrentRatesFromSheet] = useState({ single: 4192, double: 3341 });
@@ -55,17 +67,7 @@ function App() {
     double: 4228.50
   };
 
-  // Helper to check if a year has BOR approved rate
-  const hasBORRate = (year) => BOR_APPROVED_RATES.hasOwnProperty(year);
-  const getBORRate = (year) => BOR_APPROVED_RATES[year];
-  
-  // For years with BOR rates, use that rate; for others, use custom rate
-  const getEffectiveRate = (year) => {
-    if (hasBORRate(year)) {
-      return getBORRate(year);
-    }
-    return whatIfRate;
-  };
+  // Keep only the board rate as manual adjustment (not synced with Google Sheets)
   const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
   const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
   const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
@@ -148,7 +150,7 @@ function App() {
     return Number(value).toFixed(decimals);
   };
 
-  // FIXED: What-If Calculator that respects BOR rates for FY25-30, then applies custom rate
+  // FIXED: What-If Calculator that respects BOR rates for FY25-29, then applies custom rate
   const calculateWhatIfRecovery = (currentRate, baselineRate, annualRate, targetYear) => {
     const yearOrder = ['FY25', 'FY26', 'FY27', 'FY28', 'FY29', 'FY30'];
     const currentYearIndex = yearOrder.indexOf('FY25');
@@ -167,7 +169,7 @@ function App() {
       };
     }
     
-    // Apply BOR rates through FY30, then custom rate for years beyond
+    // Apply BOR rates through FY29, then custom rate for years beyond
     let projectedRate = currentRate;
     const yearByYearBreakdown = [];
     
@@ -216,12 +218,15 @@ function App() {
     const currentYearIndex = yearOrder.indexOf('FY25');
     const targetYearIndex = yearOrder.indexOf(targetYear);
     
+    const inflationAdjustedBaseline = baselineRate * 1.415;
+    
     if (targetYearIndex === -1 || targetYearIndex <= currentYearIndex) {
       return {
         projectedRate: currentRate,
-        inflationAdjustedBaseline: baselineRate * 1.415,
-        fullRecovery: currentRate >= (baselineRate * 1.415),
-        yearByYearBreakdown: [{ year: 'FY25', rate: currentRate, borRate: BOR_APPROVED_RATES['FY25'] }]
+        inflationAdjustedBaseline: inflationAdjustedBaseline,
+        fullRecovery: currentRate >= inflationAdjustedBaseline,
+        stillToRecover: Math.max(0, inflationAdjustedBaseline - currentRate),
+        yearByYearBreakdown: [{ year: 'FY25', rate: currentRate, borRate: BOR_APPROVED_RATES['FY25'] || 'N/A' }]
       };
     }
     
@@ -234,14 +239,15 @@ function App() {
       const borRate = BOR_APPROVED_RATES[year];
       
       if (i === currentYearIndex) {
-        yearByYearBreakdown.push({ year, rate: projectedRate, borRate });
-      } else {
+        yearByYearBreakdown.push({ year, rate: projectedRate, borRate: borRate || 'N/A' });
+      } else if (borRate) {
         projectedRate = projectedRate * (1 + (borRate / 100));
         yearByYearBreakdown.push({ year, rate: projectedRate, borRate });
+      } else {
+        // No BOR rate available for this year
+        yearByYearBreakdown.push({ year, rate: projectedRate, borRate: 'N/A' });
       }
     }
-    
-    const inflationAdjustedBaseline = baselineRate * 1.415;
     
     return {
       projectedRate,
@@ -262,15 +268,14 @@ function App() {
   const borDouble = calculateBORProjection(currentRatesFromSheet.double, baseline2010.double, whatIfYear);
   const borBoard = calculateBORProjection(adjustedBoardRate, boardBaseline2010, whatIfYear);
 
-  // Chart data with BOR approved rates
+  // FIXED: Chart data with BOR approved rates
   const combinedChartData = historicalRoomRates.length > 0 
     ? historicalRoomRates.slice(-8).map((item) => {
-        const borRate = BOR_APPROVED_RATES[item.year];
         return {
           year: item.year || '',
           'Room Single': Math.round(item.single || 0),
           'Room Double': Math.round(item.double || 0),
-          'BOR Rate': borRate,
+          'BOR Rate': BOR_APPROVED_RATES[item.year] || null,
         };
       })
     : [];
@@ -577,7 +582,7 @@ function App() {
         </div>
       </div>
 
-      {/* Original What-If Calculator */}
+      {/* Custom What-If Calculator */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-l-4 border-orange-500">
         <h2 className="text-2xl font-semibold mb-6 text-gray-800">Custom What-If Calculator</h2>
         <p className="text-sm text-gray-600 mb-4">
@@ -728,7 +733,7 @@ function App() {
               {whatIfBoard.yearByYearBreakdown && (
                 <div className="border-t border-orange-300 pt-3">
                   <div className="text-xs text-orange-600 font-semibold mb-2">Rate Breakdown:</div>
-                  {whatIfBoard.yearByYearBreakdown.slice(-3).map((item, idx) => (
+                  {whatIfBoard.yearByYearBreakdown.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-xs text-orange-700">
                       <span>{item.year}: {item.appliedRate}</span>
                       <span>{formatCurrency(item.rate)}</span>
@@ -741,10 +746,10 @@ function App() {
         </div>
       </div>
 
-      {/* Chart */}
+      {/* FIXED: Chart with BOR Rate Line */}
       {combinedChartData.length > 0 && (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Room Rate Trends & Year-over-Year Increases</h2>
+          <h2 className="text-xl font-semibold mb-4">Room Rate Trends & BOR Approved Rates</h2>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={combinedChartData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -757,15 +762,15 @@ function App() {
               <YAxis 
                 yAxisId="percent" 
                 orientation="right" 
-                label={{ value: 'Increase (%)', angle: 90, position: 'insideRight' }}
-                domain={[0, 'dataMax + 2']}
+                label={{ value: 'BOR Rate (%)', angle: 90, position: 'insideRight' }}
+                domain={[0, 10]}
               />
               <Tooltip 
                 formatter={(value, name) => {
-                  if (name.includes('%')) {
-                    return [`${value}%`, name];
+                  if (name === 'BOR Rate') {
+                    return value ? [`${value}%`, name] : ['No BOR Rate', name];
                   }
-                  return [`${value?.toLocaleString()}`, name];
+                  return [`$${value?.toLocaleString()}`, name];
                 }} 
               />
               <Legend />
@@ -786,24 +791,19 @@ function App() {
               <Line 
                 yAxisId="percent" 
                 type="monotone" 
-                dataKey="Single % Increase" 
+                dataKey="BOR Rate" 
                 stroke="#f59e0b" 
-                strokeWidth={2} 
-                strokeDasharray="5 5"
-              />
-              <Line 
-                yAxisId="percent" 
-                type="monotone" 
-                dataKey="Double % Increase" 
-                stroke="#ef4444" 
-                strokeWidth={2} 
-                strokeDasharray="5 5"
+                strokeWidth={3} 
+                strokeDasharray="8 4"
+                connectNulls={false}
+                dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
               />
             </LineChart>
           </ResponsiveContainer>
           <div className="mt-4 text-sm text-gray-600">
             <p><strong>Left Y-axis:</strong> Dollar amounts for room rates</p>
-            <p><strong>Right Y-axis:</strong> Year-over-year percentage increases (dashed lines)</p>
+            <p><strong>Right Y-axis:</strong> BOR approved rate percentages (dashed orange line)</p>
+            <p><strong>Note:</strong> BOR rates only show for approved years (FY25-29)</p>
           </div>
         </div>
       )}
