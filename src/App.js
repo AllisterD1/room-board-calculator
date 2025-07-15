@@ -8,6 +8,7 @@ function App() {
 
   // State for data loaded from Google Sheets
   const [historicalRoomRates, setHistoricalRoomRates] = useState([]);
+  const [currentRatesFromSheet, setCurrentRatesFromSheet] = useState({ single: 4192, double: 3341 });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
@@ -38,14 +39,7 @@ function App() {
   // Baseline data
   const baseline2010 = { single: 3748.55, double: 2987.57 };
 
-  // Get current rates from latest Google Sheets data (FY25)
-  const currentActual = historicalRoomRates.length > 0 
-    ? { 
-        single: historicalRoomRates.find(r => r.year === 'FY25')?.single || 5305.56,
-        double: historicalRoomRates.find(r => r.year === 'FY25')?.double || 4228.50
-      }
-    : { single: 5305.56, double: 4228.50 };
-
+  // Target rates (from FY25 historical data)
   const targetRates = {
     single: 5305.56,
     double: 4228.50
@@ -61,16 +55,28 @@ function App() {
       
       const data = await response.json();
       
-      if (!data || !Array.isArray(data) || data.length === 0) {
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (!data.historicalData || !Array.isArray(data.historicalData)) {
         throw new Error('Invalid data structure from Apps Script');
       }
 
-      setHistoricalRoomRates(data);
+      // Update both historical data and current rates
+      setHistoricalRoomRates(data.historicalData);
+      
+      if (data.currentRates) {
+        setCurrentRatesFromSheet(data.currentRates);
+      }
+      
       setLastUpdated(new Date().toLocaleString());
       console.log('Successfully loaded data from Google Apps Script');
+      console.log('Current rates from I45/I46:', data.currentRates);
     } catch (error) {
       console.error('Error fetching Google Apps Script data:', error);
       setHistoricalRoomRates(defaultHistoricalRoomRates);
+      setCurrentRatesFromSheet({ single: 4192, double: 3341 });
     } finally {
       setLoading(false);
     }
@@ -87,25 +93,22 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // State management - Initialize with default values
-  const [adjustedSingle, setAdjustedSingle] = useState(5305.56);
-  const [adjustedDouble, setAdjustedDouble] = useState(4228.50);
+  // State management - Initialize with current rates from sheet
+  const [adjustedSingle, setAdjustedSingle] = useState(4192);
+  const [adjustedDouble, setAdjustedDouble] = useState(3341);
   const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
   const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
   const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
   const [whatIfRate, setWhatIfRate] = useState(5);
   const [whatIfYear, setWhatIfYear] = useState('FY30');
 
-  // Update slider values when Google Sheets data loads
+  // Update slider values when Google Sheets data loads (from I45/I46)
   useEffect(() => {
-    if (historicalRoomRates.length > 0) {
-      const fy25Data = historicalRoomRates.find(r => r.year === 'FY25');
-      if (fy25Data) {
-        setAdjustedSingle(fy25Data.single);
-        setAdjustedDouble(fy25Data.double);
-      }
+    if (currentRatesFromSheet) {
+      setAdjustedSingle(currentRatesFromSheet.single);
+      setAdjustedDouble(currentRatesFromSheet.double);
     }
-  }, [historicalRoomRates]);
+  }, [currentRatesFromSheet]);
 
   // Available years for dropdown
   const availableYears = historicalRoomRates.length > 0 ? historicalRoomRates.map(rate => rate.year) : ['FY25'];
@@ -204,7 +207,7 @@ function App() {
           </button>
         </div>
         <div className="flex justify-between items-center">
-          <p className="text-gray-600">Live Google Sheets integration with real-time rate analysis</p>
+          <p className="text-gray-600">Live Google Sheets integration - Current rates from I45/I46</p>
           <div className="text-sm text-gray-500">
             {lastUpdated ? (
               <div className="flex items-center space-x-2">
@@ -228,19 +231,19 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedSingle)}
+                Current Rate: {formatCurrency(adjustedSingle)} <span className="text-xs text-gray-500">(from I45)</span>
               </label>
               <input
                 type="range"
                 min="3500"
-                max="6000"
+                max="10000"
                 value={adjustedSingle}
                 onChange={(e) => setAdjustedSingle(parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$3,500</span>
-                <span>$6,000</span>
+                <span>$10,000</span>
               </div>
             </div>
             <div className="p-4 rounded-lg border-2 bg-blue-50 border-blue-200">
@@ -263,19 +266,19 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedDouble)}
+                Current Rate: {formatCurrency(adjustedDouble)} <span className="text-xs text-gray-500">(from I46)</span>
               </label>
               <input
                 type="range"
                 min="2800"
-                max="5000"
+                max="8000"
                 value={adjustedDouble}
                 onChange={(e) => setAdjustedDouble(parseInt(e.target.value))}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>$2,800</span>
-                <span>$5,000</span>
+                <span>$8,000</span>
               </div>
             </div>
             <div className="p-4 rounded-lg border-2 bg-purple-50 border-purple-200">
