@@ -520,7 +520,7 @@ function App() {
         
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
           <div className="bg-gray-50 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Target Year for BOR Projections</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Planning Year for BOR Projections</label>
             <select
               value={whatIfYear}
               onChange={(e) => setWhatIfYear(e.target.value)}
@@ -635,20 +635,20 @@ function App() {
         </div>
       </div>
 
-      {/* Custom What-If Calculator */}
+      {/* Proposed Rate Calculator */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border-l-4 border-orange-500">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Custom What-If Calculator</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Proposed Rate Calculator</h2>
         <p className="text-sm text-gray-600 mb-4">
           <strong>How it works:</strong> 
           <br />• <strong>FY25-29:</strong> Uses fixed BOR approved rates (rate input locked)
-          <br />• <strong>FY30+:</strong> Uses your custom rate input for years beyond board approval
+          <br />• <strong>FY30+:</strong> Uses your proposed annual rate for years beyond board approval
           <br />• Always respects the approved rates for years that have them
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-orange-50 rounded-lg p-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {hasBORRate(whatIfYear) ? `Rate for ${whatIfYear} (BOR Fixed)` : 'Custom Annual Rate (%)'}
+              {hasBORRate(whatIfYear) ? `Rate for ${whatIfYear} (BOR Fixed)` : 'Proposed Annual Rate (%)'}
             </label>
             {hasBORRate(whatIfYear) ? (
               <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 font-semibold text-center">
@@ -669,7 +669,7 @@ function App() {
           </div>
 
           <div className="bg-orange-50 rounded-lg p-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Target Year</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Planning Year</label>
             <select
               value={whatIfYear}
               onChange={(e) => setWhatIfYear(e.target.value)}
@@ -684,7 +684,7 @@ function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-orange-50 rounded-lg border-2 border-orange-200 p-6">
-            <h3 className="text-lg font-semibold text-orange-800 mb-4">Single Room Custom What-If</h3>
+            <h3 className="text-lg font-semibold text-orange-800 mb-4">Single Room Proposed Rate</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-orange-700">Projected by {whatIfYear}:</span>
@@ -722,7 +722,7 @@ function App() {
           </div>
 
           <div className="bg-orange-50 rounded-lg border-2 border-orange-200 p-6">
-            <h3 className="text-lg font-semibold text-orange-800 mb-4">Double Room Custom What-If</h3>
+            <h3 className="text-lg font-semibold text-orange-800 mb-4">Double Room Proposed Rate</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-orange-700">Projected by {whatIfYear}:</span>
@@ -760,7 +760,7 @@ function App() {
           </div>
 
           <div className="bg-orange-50 rounded-lg border-2 border-orange-200 p-6">
-            <h3 className="text-lg font-semibold text-orange-800 mb-4">Board Rate Custom What-If</h3>
+            <h3 className="text-lg font-semibold text-orange-800 mb-4">Board Rate Projection</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-orange-700">Projected by {whatIfYear}:</span>
