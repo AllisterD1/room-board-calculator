@@ -154,12 +154,16 @@ function App() {
     const currentYearIndex = yearOrder.indexOf('FY25');
     const targetYearIndex = yearOrder.indexOf(targetYear);
     
+    const inflationAdjustedBaseline = baselineRate * 1.415;
+    
     if (targetYearIndex === -1 || targetYearIndex <= currentYearIndex) {
+      // Even for current year (FY25), we still need to calculate the gap
       return {
         projectedRate: currentRate,
-        inflationAdjustedBaseline: baselineRate * 1.415,
-        fullRecovery: currentRate >= (baselineRate * 1.415),
-        yearByYearBreakdown: [{ year: 'FY25', rate: currentRate, appliedRate: 'Current' }]
+        inflationAdjustedBaseline: inflationAdjustedBaseline,
+        fullRecovery: currentRate >= inflationAdjustedBaseline,
+        stillToRecover: Math.max(0, inflationAdjustedBaseline - currentRate),
+        yearByYearBreakdown: [{ year: 'FY25', rate: currentRate, appliedRate: 'Current Rate' }]
       };
     }
     
@@ -196,8 +200,6 @@ function App() {
         });
       }
     }
-    
-    const inflationAdjustedBaseline = baselineRate * 1.415;
     
     return {
       projectedRate,
