@@ -206,7 +206,7 @@ function App() {
           </button>
         </div>
         <div className="flex justify-between items-center">
-          <p className="text-gray-600">Adjust sliders for scenarios, view live rates in Current Totals</p>
+          <p className="text-gray-600">Sliders auto-update from I45/I46, adjust for scenarios</p>
           <div className="text-sm text-gray-500">
             {lastUpdated ? (
               <div className="flex items-center space-x-2">
@@ -223,14 +223,14 @@ function App() {
         </div>
       </div>
 
-      {/* Rate Adjustment Controls - Manual Sliders */}
+      {/* Rate Adjustment Controls - Auto-Update from Google Sheets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Single Room Rate</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scenario Rate: {formatCurrency(adjustedSingle)}
+                Current Rate: {formatCurrency(adjustedSingle)} <span className="text-xs text-gray-500">(auto-updates from I45)</span>
               </label>
               <input
                 type="range"
@@ -265,7 +265,7 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scenario Rate: {formatCurrency(adjustedDouble)}
+                Current Rate: {formatCurrency(adjustedDouble)} <span className="text-xs text-gray-500">(auto-updates from I46)</span>
               </label>
               <input
                 type="range"
@@ -300,7 +300,7 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Scenario Rate: {formatCurrency(adjustedBoardRate)}
+                Current Rate: {formatCurrency(adjustedBoardRate)} <span className="text-xs text-gray-500">(manual adjustment)</span>
               </label>
               <input
                 type="range"
