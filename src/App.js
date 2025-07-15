@@ -59,20 +59,27 @@ function App() {
         throw new Error(data.error);
       }
       
-      if (!data.historicalData || !Array.isArray(data.historicalData)) {
+      // Handle both old format (just array) and new format (with currentRates)
+      if (Array.isArray(data)) {
+        // Old format - just historical data
+        setHistoricalRoomRates(data);
+        setLastUpdated(new Date().toLocaleString());
+        console.log('Successfully loaded historical data from Google Apps Script');
+      } else if (data.historicalData) {
+        // New format - with current rates
+        setHistoricalRoomRates(data.historicalData);
+        
+        if (data.currentRates) {
+          setCurrentRatesFromSheet(data.currentRates);
+          console.log('Current rates from I45/I46:', data.currentRates);
+        }
+        
+        setLastUpdated(new Date().toLocaleString());
+        console.log('Successfully loaded data from Google Apps Script');
+      } else {
         throw new Error('Invalid data structure from Apps Script');
       }
-
-      // Update both historical data and current rates
-      setHistoricalRoomRates(data.historicalData);
       
-      if (data.currentRates) {
-        setCurrentRatesFromSheet(data.currentRates);
-      }
-      
-      setLastUpdated(new Date().toLocaleString());
-      console.log('Successfully loaded data from Google Apps Script');
-      console.log('Current rates from I45/I46:', data.currentRates);
     } catch (error) {
       console.error('Error fetching Google Apps Script data:', error);
       setHistoricalRoomRates(defaultHistoricalRoomRates);
@@ -93,7 +100,7 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // State management - Initialize with current rates from sheet
+  // State management - Manual slider controls (NOT auto-updated)
   const [adjustedSingle, setAdjustedSingle] = useState(4192);
   const [adjustedDouble, setAdjustedDouble] = useState(3341);
   const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
@@ -101,14 +108,6 @@ function App() {
   const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
   const [whatIfRate, setWhatIfRate] = useState(5);
   const [whatIfYear, setWhatIfYear] = useState('FY30');
-
-  // Update slider values when Google Sheets data loads (from I45/I46)
-  useEffect(() => {
-    if (currentRatesFromSheet) {
-      setAdjustedSingle(currentRatesFromSheet.single);
-      setAdjustedDouble(currentRatesFromSheet.double);
-    }
-  }, [currentRatesFromSheet]);
 
   // Available years for dropdown
   const availableYears = historicalRoomRates.length > 0 ? historicalRoomRates.map(rate => rate.year) : ['FY25'];
@@ -207,7 +206,7 @@ function App() {
           </button>
         </div>
         <div className="flex justify-between items-center">
-          <p className="text-gray-600">Live Google Sheets integration - Current rates from I45/I46</p>
+          <p className="text-gray-600">Adjust sliders for scenarios, view live rates in Current Totals</p>
           <div className="text-sm text-gray-500">
             {lastUpdated ? (
               <div className="flex items-center space-x-2">
@@ -224,14 +223,14 @@ function App() {
         </div>
       </div>
 
-      {/* Rate Adjustment Controls */}
+      {/* Rate Adjustment Controls - Manual Sliders */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Single Room Rate</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedSingle)} <span className="text-xs text-gray-500">(from I45)</span>
+                Scenario Rate: {formatCurrency(adjustedSingle)}
               </label>
               <input
                 type="range"
@@ -266,7 +265,7 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedDouble)} <span className="text-xs text-gray-500">(from I46)</span>
+                Scenario Rate: {formatCurrency(adjustedDouble)}
               </label>
               <input
                 type="range"
@@ -301,7 +300,7 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(adjustedBoardRate)}
+                Scenario Rate: {formatCurrency(adjustedBoardRate)}
               </label>
               <input
                 type="range"
@@ -453,23 +452,26 @@ function App() {
         </div>
       )}
 
-      {/* Current Totals */}
+      {/* Current Totals - LIVE DATA FROM I45/I46 */}
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Current Totals</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Current Totals (Live from Google Sheet)</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
             <h3 className="text-lg font-semibold text-blue-800 mb-2">Single Room</h3>
-            <p className="text-3xl font-bold text-blue-600">{formatCurrency(adjustedSingle)}</p>
+            <p className="text-3xl font-bold text-blue-600">{formatCurrency(currentRatesFromSheet.single)}</p>
+            <p className="text-xs text-gray-500 mt-1">From cell I45</p>
           </div>
           
           <div className="text-center p-6 bg-purple-50 rounded-lg border-2 border-purple-200">
-            <h3 className="text-lg font-semibold text-purple-800 mb-2">Board Rate</h3>
-            <p className="text-3xl font-bold text-purple-600">{formatCurrency(adjustedBoardRate)}</p>
+            <h3 className="text-lg font-semibold text-purple-800 mb-2">Double Room</h3>
+            <p className="text-3xl font-bold text-purple-600">{formatCurrency(currentRatesFromSheet.double)}</p>
+            <p className="text-xs text-gray-500 mt-1">From cell I46</p>
           </div>
           
           <div className="text-center p-6 bg-green-50 rounded-lg border-2 border-green-200">
             <h3 className="text-lg font-semibold text-green-800 mb-2">Total Package</h3>
-            <p className="text-4xl font-bold text-green-600">{formatCurrency(adjustedSingle + adjustedBoardRate)}</p>
+            <p className="text-4xl font-bold text-green-600">{formatCurrency(currentRatesFromSheet.single + currentRatesFromSheet.double)}</p>
+            <p className="text-xs text-gray-500 mt-1">I45 + I46</p>
           </div>
         </div>
       </div>
