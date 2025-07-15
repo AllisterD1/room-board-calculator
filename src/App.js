@@ -37,7 +37,13 @@ function App() {
 
   // Baseline data
   const baseline2010 = { single: 3748.55, double: 2987.57 };
-  const currentActual = { single: 4192, double: 3341 };
+  // Get current rates from latest Google Sheets data
+const currentActual = historicalRoomRates.length > 0 
+  ? { 
+      single: historicalRoomRates.find(r => r.year === 'FY25')?.single || 4192,
+      double: historicalRoomRates.find(r => r.year === 'FY25')?.double || 3341
+    }
+  : { single: 4192, double: 3341 };
   const targetRates = { single: 5305.56, double: 4228.50 };
 
   // Function to fetch data from Google Apps Script
@@ -66,9 +72,16 @@ function App() {
   };
 
   // Load data on component mount
-  useEffect(() => {
-    fetchGoogleSheetData();
-  }, []);
+  // Update slider values when data loads
+useEffect(() => {
+  if (historicalRoomRates.length > 0) {
+    const fy25Data = historicalRoomRates.find(r => r.year === 'FY25');
+    if (fy25Data) {
+      setAdjustedSingle(fy25Data.single);
+      setAdjustedDouble(fy25Data.double);
+    }
+  }
+}, [historicalRoomRates]);
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
@@ -77,8 +90,8 @@ function App() {
   }, []);
 
   // State management
-  const [adjustedSingle, setAdjustedSingle] = useState(currentActual.single);
-  const [adjustedDouble, setAdjustedDouble] = useState(currentActual.double);
+  const [adjustedSingle, setAdjustedSingle] = useState(4192);
+  const [adjustedDouble, setAdjustedDouble] = useState(3341);
   const [adjustedBoardRate, setAdjustedBoardRate] = useState(3500);
   const [roomAnnualIncrease, setRoomAnnualIncrease] = useState(5);
   const [boardAnnualIncrease, setBoardAnnualIncrease] = useState(4);
