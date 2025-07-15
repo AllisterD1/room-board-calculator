@@ -129,6 +129,35 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Calculate projected rates for the selected target year (for sliders)
+  const calculateProjectedRatesForYear = (currentRate, targetYear) => {
+    const yearOrder = ['FY25', 'FY26', 'FY27', 'FY28', 'FY29', 'FY30'];
+    const currentYearIndex = yearOrder.indexOf('FY25');
+    const targetYearIndex = yearOrder.indexOf(targetYear);
+    
+    if (targetYearIndex === -1 || targetYearIndex <= currentYearIndex) {
+      return currentRate;
+    }
+    
+    let projectedRate = currentRate;
+    
+    for (let i = currentYearIndex + 1; i <= targetYearIndex; i++) {
+      const year = yearOrder[i];
+      const borRate = BOR_APPROVED_RATES[year];
+      
+      if (borRate) {
+        projectedRate = projectedRate * (1 + (borRate / 100));
+      }
+      // If no BOR rate, don't apply any increase for that year
+    }
+    
+    return projectedRate;
+  };
+
+  // Calculate projected rates for sliders based on selected target year
+  const projectedSingleForYear = calculateProjectedRatesForYear(currentRatesFromSheet.single, whatIfYear);
+  const projectedDoubleForYear = calculateProjectedRatesForYear(currentRatesFromSheet.double, whatIfYear);
+
   // Available years for dropdown
   const availableYears = historicalRoomRates.length > 0 ? historicalRoomRates.map(rate => rate.year) : ['FY25'];
 
@@ -359,14 +388,26 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(currentRatesFromSheet.single)} <span className="text-xs text-blue-600 font-semibold">(synced with I45)</span>
+                {whatIfYear === 'FY25' ? (
+                  <>Current Rate: {formatCurrency(projectedSingleForYear)} <span className="text-xs text-blue-600 font-semibold">(synced with I45)</span></>
+                ) : (
+                  <>Projected Rate for {whatIfYear}: {formatCurrency(projectedSingleForYear)} <span className="text-xs text-blue-600 font-semibold">(using BOR rates)</span></>
+                )}
               </label>
               <input
                 type="range"
                 min="3500"
                 max="10000"
-                value={currentRatesFromSheet.single}
-                onChange={(e) => setCurrentRatesFromSheet(prev => ({ ...prev, single: parseInt(e.target.value) }))}
+                value={Math.round(projectedSingleForYear)}
+                onChange={(e) => {
+                  // Calculate what the base current rate should be to achieve this projected value
+                  const targetProjected = parseInt(e.target.value);
+                  const currentBase = currentRatesFromSheet.single;
+                  const projectedFromCurrent = calculateProjectedRatesForYear(currentBase, whatIfYear);
+                  const ratio = targetProjected / projectedFromCurrent;
+                  const newCurrentRate = Math.round(currentBase * ratio);
+                  setCurrentRatesFromSheet(prev => ({ ...prev, single: newCurrentRate }));
+                }}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -380,9 +421,9 @@ function App() {
                 <span className="font-bold">{formatCurrency(targetRates.single)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="font-medium">Gap:</span>
-                <span className={`font-bold ${currentRatesFromSheet.single >= targetRates.single ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(Math.abs(singleGap))} ({formatNumber(Math.abs(singleGap / currentRatesFromSheet.single * 100))}%)
+                <span className="font-medium">Gap from {whatIfYear}:</span>
+                <span className={`font-bold ${projectedSingleForYear >= targetRates.single ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(Math.abs(targetRates.single - projectedSingleForYear))} ({formatNumber(Math.abs((targetRates.single - projectedSingleForYear) / projectedSingleForYear * 100))}%)
                 </span>
               </div>
             </div>
@@ -394,14 +435,26 @@ function App() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Rate: {formatCurrency(currentRatesFromSheet.double)} <span className="text-xs text-purple-600 font-semibold">(synced with I46)</span>
+                {whatIfYear === 'FY25' ? (
+                  <>Current Rate: {formatCurrency(projectedDoubleForYear)} <span className="text-xs text-purple-600 font-semibold">(synced with I46)</span></>
+                ) : (
+                  <>Projected Rate for {whatIfYear}: {formatCurrency(projectedDoubleForYear)} <span className="text-xs text-purple-600 font-semibold">(using BOR rates)</span></>
+                )}
               </label>
               <input
                 type="range"
                 min="2800"
                 max="8000"
-                value={currentRatesFromSheet.double}
-                onChange={(e) => setCurrentRatesFromSheet(prev => ({ ...prev, double: parseInt(e.target.value) }))}
+                value={Math.round(projectedDoubleForYear)}
+                onChange={(e) => {
+                  // Calculate what the base current rate should be to achieve this projected value
+                  const targetProjected = parseInt(e.target.value);
+                  const currentBase = currentRatesFromSheet.double;
+                  const projectedFromCurrent = calculateProjectedRatesForYear(currentBase, whatIfYear);
+                  const ratio = targetProjected / projectedFromCurrent;
+                  const newCurrentRate = Math.round(currentBase * ratio);
+                  setCurrentRatesFromSheet(prev => ({ ...prev, double: newCurrentRate }));
+                }}
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -415,9 +468,9 @@ function App() {
                 <span className="font-bold">{formatCurrency(targetRates.double)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="font-medium">Gap:</span>
-                <span className={`font-bold ${currentRatesFromSheet.double >= targetRates.double ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(Math.abs(doubleGap))} ({formatNumber(Math.abs(doubleGap / currentRatesFromSheet.double * 100))}%)
+                <span className="font-medium">Gap from {whatIfYear}:</span>
+                <span className={`font-bold ${projectedDoubleForYear >= targetRates.double ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(Math.abs(targetRates.double - projectedDoubleForYear))} ({formatNumber(Math.abs((targetRates.double - projectedDoubleForYear) / projectedDoubleForYear * 100))}%)
                 </span>
               </div>
             </div>
